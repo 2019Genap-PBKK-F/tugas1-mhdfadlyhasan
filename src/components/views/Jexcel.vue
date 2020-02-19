@@ -1,55 +1,90 @@
 <template>
-<div id="spreadsheet">
-    <div id="tabel">
-    <input type="button" @click="logdata" value="Send Data">
-    </div>
+<div>
+  <div id="spreadsheet"></div>
+  <div class="row n-5">
+    <div><input type="button" class="col btn btn-primary btn-lg p-3" value="Add new row" @click="logdata" />
+    <input type="button" value="Delete row ini" class=" col btn btn-danger btn-lg"  @click="deletedata" /></div>
+  </div>
 </div>
 
 </template>
 <script>
+import axios from 'axios'
 import jexcel from 'jexcel'
 import 'jexcel/dist/jexcel.css'
-import Vue from 'vue'
-// import axios from 'axios'
 
-var data = [
-  ['Jazz', 'Honda', '2019-02-12', '', true, '$ 2.000,00', '#777700'],
-  ['Civic', 'Honda', '2018-07-11', '', true, '$ 4.000,01', '#007777']
-]
-
-var vm = new Vue(
-  {
-    el: '#inputer',
-    data: data,
-    mounted: function() {
-      console.log('fetchdata disini')
-    }
-  })
-console.log(vm)
-
-var options = {
-  data: data,
-  allowToolbar: true,
-  columns: [
-    { type: 'text', title: 'Car', width: '120px' },
-    { type: 'dropdown', title: 'Make', width: '250px', source: [ 'Alfa Romeo', 'Audi', 'Bmw' ] },
-    { type: 'calendar', title: 'Available', width: '250px' },
-    { type: 'image', title: 'Photo', width: '120px' },
-    { type: 'checkbox', title: 'Stock', width: '80px' },
-    { type: 'numeric', title: 'Price', width: '100px', mask: '$ #.##,00', decimal: ',' }
-  ]
-}
 export default {
-  name: 'tabel',
-  data: data,
-  mounted: function () {
-    let spreadsheet = jexcel(this.$el, options)
-    Object.assign(this, spreadsheet)
+  name: 'App',
+  data () {
+    return {
+      listData: [],
+      form: {
+        id: '',
+        nrp: '',
+        nama: ''
+      }
+    }
   },
-  methods:
-  {logdata: function() {
-    console.log('data dikirim')
-    console.log(data)
-  }}
+  mounted: function() {
+    let spreadsheet = jexcel(this.$el, this.options)
+    Object.assign(this, {spreadsheet})
+  },
+  methods: {
+    New() {
+      axios.post('http://localhost:3000/data/', this.form).then(res => {
+        console.log(res.data)
+      })
+    },
+    Update(instance, cell, columns, row, value) {
+      console.log('jalan')
+      axios.get('http://localhost:3000/data/').then(res => {
+        var index = Object.values(res.data[row])
+        index[columns] = value
+        console.log(index)
+        axios.put('http://localhost:3000/data/' + index[0], {
+          id: index[0],
+          nrp: index[1],
+          nama: index[2]
+        }).then(res => {
+          console.log(res.data)
+        })
+      })
+    },
+    Delete(instance, row) {
+      axios.get('http://localhost:3000/data/').then(res => {
+        var index = Object.values(res.data[row])
+        // console.log(index)
+        console.log(row)
+        axios.delete('http://localhost:3000/data/' + index[0])
+      })
+    },
+    logdata: function() {
+      console.log('data ditambahkan')
+      this.spreadsheet.insertRow()
+    },
+    deletedata: function() {
+      console.log('data dihapus')
+      this.spreadsheet.deleteRow()
+    }
+  },
+  computed: {
+    options() {
+      return {
+        allowToolbar: true,
+        data: this.listData,
+        url: ('http://localhost:3000/data/'),
+        columns: [
+          { type: 'hidden', title: 'id', width: '120px' },
+          { type: 'text', title: 'Nama', width: '120px' },
+          { type: 'text', title: 'NRP', width: '120' }
+        ],
+        onchange: this.Update,
+        oninsertrow: this.New,
+        ondeleterow: this.Delete,
+        mounted: function() {
+        }
+      }
+    }
+  }
 }
 </script>
